@@ -1,15 +1,33 @@
 name: 'dev'
 services:
-  pgsql:
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    working_dir: /api
+    volumes:
+      - ./api:/api
+      - go-mod:/go/pkg/mod   # cache das deps
+      - go-build:/root/.cache/go-build
+    ports:
+      - "8000:8000"
+    environment:
+      MINIO_ROOT_USER: '${MINIO_ROOT_USER}'
+      MINIO_ROOT_PASSWORD: '${MINIO_ROOT_PASSWORD}'
+      MINIO_REGION: '${MINIO_REGION}'
+      MINIO_BUCKET: '${MINIO_BUCKET}'
+      MONGO_URI: '${MONGO_URI}'
+      POSTGRES_URI: '${POSTGRES_URI}'
+  postgres:
     image: 'postgres:15'
     ports:
         - '${FORWARD_DB_PORT:-5432}:5432'
     environment:
-        PGPASSWORD: '${DB_PASSWORD:-secret}'
         POSTGRES_DB: '${DB_DATABASE}'
         POSTGRES_USER: '${DB_USERNAME}'
+        POSTGRES_PASSWORD: '${DB_PASSWORD:-secret}'
     volumes:
-        - 'storage-pgsql:/var/lib/postgresql/data'
+        - 'storage-postgres:/var/lib/postgresql/data'
     networks:
         - net
   mongo:
@@ -29,14 +47,14 @@ services:
             MINIO_ROOT_USER: '${MINIO_ROOT_USER}'
             MINIO_ROOT_PASSWORD: '${MINIO_ROOT_PASSWORD}'
             MINIO_REGION: '${MINIO_REGION}'
-            S3_BUCKET: '${S3_BUCKET}'
+            MINIO_BUCKET: '${MINIO_BUCKET}'
     image: s3
     restart: on-failure
     environment:
         MINIO_ROOT_USER: '${MINIO_ROOT_USER}'
         MINIO_ROOT_PASSWORD: '${MINIO_ROOT_PASSWORD}'
         MINIO_REGION: '${MINIO_REGION}'
-        S3_BUCKET: '${S3_BUCKET}'
+        MINIO_BUCKET: '${MINIO_BUCKET}'
     ports:
         - '9000:9000'
         - '9090:9090'
@@ -48,7 +66,9 @@ networks:
   net:
     driver: bridge
 volumes:
-  storage-pgsql:
+  go-mod:
+  go-build:
+  storage-postgres:
     driver: local
   storage-s3:
     driver: local 

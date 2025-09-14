@@ -13,6 +13,7 @@ type Content struct {
 type Question interface {
 	Statement() *Content
 	InsertId()
+	Validate(string) bool
 }
 
 type Option struct {
