@@ -1,0 +1,56 @@
+name: 'dev'
+services:
+  pgsql:
+    image: 'postgres:15'
+    ports:
+        - '${FORWARD_DB_PORT:-5432}:5432'
+    environment:
+        PGPASSWORD: '${DB_PASSWORD:-secret}'
+        POSTGRES_DB: '${DB_DATABASE}'
+        POSTGRES_USER: '${DB_USERNAME}'
+    volumes:
+        - 'storage-pgsql:/var/lib/postgresql/data'
+    networks:
+        - net
+  mongo:
+    image: 'mongo:8'
+    restart: on-failure
+    volumes:
+      - storage-mongo:/data/db
+    ports:
+      - '2701:27017'
+    networks:
+      - net
+  s3:
+    build:
+        context: ./s3
+        dockerfile: Dockerfile
+        args: 
+            MINIO_ROOT_USER: '${MINIO_ROOT_USER}'
+            MINIO_ROOT_PASSWORD: '${MINIO_ROOT_PASSWORD}'
+            MINIO_REGION: '${MINIO_REGION}'
+            S3_BUCKET: '${S3_BUCKET}'
+    image: s3
+    restart: on-failure
+    environment:
+        MINIO_ROOT_USER: '${MINIO_ROOT_USER}'
+        MINIO_ROOT_PASSWORD: '${MINIO_ROOT_PASSWORD}'
+        MINIO_REGION: '${MINIO_REGION}'
+        S3_BUCKET: '${S3_BUCKET}'
+    ports:
+        - '9000:9000'
+        - '9090:9090'
+    volumes:
+        - 'storage-s3:/data'
+    networks:
+        - net
+networks:
+  net:
+    driver: bridge
+volumes:
+  storage-pgsql:
+    driver: local
+  storage-s3:
+    driver: local 
+  storage-mongo:
+    driver: local 
